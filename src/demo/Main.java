@@ -32,8 +32,8 @@ public class Main {
 		// TODO Auto-generated method stub
 		String endPoint = args[0];
 		String region = args[1];
-		System.out.println(endPoint);
-		Server myserver = new Server(8080);
+		String PORT = args[2];
+		Server myserver = new Server(PORT);
 		ExecutorService executor = Executors.newFixedThreadPool(3);
 		try {
 			myserver.startServer(executor);
