@@ -1,52 +1,43 @@
 package demo;
 
-import java.time.Instant;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.apache.commons.cli.ParseException;
-
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSCredentialsProviderChain;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
-import com.amazonaws.services.dynamodbv2.document.Table;
-import com.amazonaws.services.dynamodbv2.document.TableCollection;
-import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
-import com.amazonaws.services.dynamodbv2.exceptions.DynamoDBLocalServiceException;
-import com.amazonaws.services.dynamodbv2.local.main.ServerRunner;
-import com.amazonaws.services.dynamodbv2.local.server.DynamoDBProxyServer;
-import com.amazonaws.services.dynamodbv2.model.ListTablesResult;
+
 public class Main {
 
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-		String endPoint = args[0];
-		String region = args[1];
-		String PORT = args[2];
+		String dynamoEndPoint = args[0];
+		String snsEndPoint = args[1];
+		String region = args[2];
+		int PORT = Integer.parseInt(args[3]);
+		String access_key = args[4];
+		String secret_key = args[5];
+		String stage = "PROD";
 		Server myserver = new Server(PORT);
+		DynamoDb opers = null;
+		Publish publish = null;
+		if(stage == "PROD") {
+		System.out.println("enter production");
+		opers = new DynamoDbOper(dynamoEndPoint, region, access_key, secret_key);
+		publish = new PublishMessage(access_key, secret_key, snsEndPoint, region);
+		} else {
+		opers = new DummyDynamoDb();
+		publish = new DummyPublish();
+		}
+		Builder.dynamoDB(opers);
+		Builder.sns(publish);
 		ExecutorService executor = Executors.newFixedThreadPool(3);
 		try {
 			myserver.startServer(executor);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		InMemoryQueue inMem = InMemoryQueue.init(100);
 		
-//		try {
-DynamoDbOper opers = new DynamoDbOper(endPoint, region);
-opers.readData("BirthDayTable", "22-07", "23-07");
-
+		
 	}
 
 }

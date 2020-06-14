@@ -5,9 +5,14 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
+
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
@@ -50,5 +55,31 @@ public class Utils {
 		
 		LocalDateTime e1 = LocalDateTime.parse(formatTime, formatter);
 		return ZonedDateTime.of(e1, ZoneId.of("UTC")); 
+	}
+	
+	public static String getZonesList() {
+		return ZoneId.getAvailableZoneIds().toString();
+	}
+	
+	public static String getListFriends(String name) throws Exception {
+		StringBuilder sb = new StringBuilder();
+		int i = 0;
+		sb.append("{");
+		Iterator<Item> iterator = Builder.db().ListFriendData("BirthDayTable", name);
+		ObjectMapper mapper = new ObjectMapper();
+		while(iterator.hasNext()) {
+			Item item = iterator.next();
+			FriendData data = new FriendData(item.get("FriendName").toString(),
+					item.get("Email").toString(),
+					item.get("BirthDay").toString(),
+					item.get("FriendTimeZone").toString(),
+					item.get("MyTimeZone").toString());
+			sb.append("\"" + i + "\"").append(": ").append(mapper.writeValueAsString(data));
+			i++;
+			if(iterator.hasNext()) sb.append(", ");
+			
+		}
+		sb.append("}");
+		return sb.toString();
 	}
 }

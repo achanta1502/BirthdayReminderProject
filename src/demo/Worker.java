@@ -9,10 +9,15 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.StringTokenizer;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Worker implements Runnable{
 	BlockingQueue<? extends Object> queue;
@@ -31,35 +36,99 @@ public class Worker implements Runnable{
 		try {
 			
 			br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			String headerLine = null;
+			String headerLine = br.readLine();
+			StringTokenizer tokens = new StringTokenizer(headerLine);
+			//System.out.println(headerLine);
 		    while((headerLine = br.readLine()).length() != 0){
-		        System.out.println(headerLine);
 		    }
 
-		//code to read the post payload data
-		StringBuilder payload = new StringBuilder();
-		        while(br.ready()){
-		            payload.append((char) br.read());
-		            }
-		System.out.println("Payload data is: "+payload.toString());
+		    //code to read the post payload data
+		    StringBuilder payload = new StringBuilder();
+	        while(br.ready()){
+	            payload.append((char) br.read());
+	            }
+	        ObjectMapper mapper = new ObjectMapper();
+		    String method = tokens.nextToken();
+		    String api = tokens.nextToken();
+		    System.out.println(method + ", "+ api );
+		  
+		    System.out.println("done");
+		    if(api.equals("") || api.equals("/")) {
+		    	header = new PrintWriter(socket.getOutputStream());
+		    	header.println("HTTP/1.1 400 BAD-REQUEST");	
+		    	header.println("Access-Control-Allow-Origin: " + "*");
+		    	header.println("Content-type: " + "text/plain");
+				header.println("Content-length: " + 0);
+				header.flush();
+				out = new BufferedOutputStream(socket.getOutputStream());
+				out.write("".getBytes());
+				out.flush();
+		    	return;
+		    }
+		    if(method.equals("GET")) {
+		    	if(api.equals("/getZonesList")) {
+		    		
+		    		header = new PrintWriter(socket.getOutputStream());
+					
+		    		String res = Utils.getZonesList();
+
+					header.println("HTTP/1.1 200 OK");
+					header.println("Access-Control-Allow-Origin: " + "*");
+					header.println("Content-type: " + "text/plain");
+					header.println("Content-length: " + res.length());
+					header.println();
+					header.flush();
+					out = new BufferedOutputStream(socket.getOutputStream());
+					out.write(res.getBytes());
+					out.flush();
+					
+		    	} } else if(api.equals("/listFriends")) {
+		    		System.out.println("enter");
+		    		String res = Utils.getListFriends(payload.toString());
+		    		System.out.println(res);
+		    		header = new PrintWriter(socket.getOutputStream());
+					
+
+					header.println("HTTP/1.1 200 OK");
+					header.println("Access-Control-Allow-Origin: " + "*");
+					header.println("Content-type: " + "text/plain");
+					header.println("Content-length: " + res.length());
+					header.println();
+					header.flush();
+					out = new BufferedOutputStream(socket.getOutputStream());
+					out.write(res.getBytes());
+					out.flush();
+		    	}
+		    	
+		     else 
+		    	if(api.equals("/addFriends")) {
+			        FriendData friendData = mapper.readValue(payload.toString(), FriendData.class);
+		    		System.out.println(friendData.toString());
+					header = new PrintWriter(socket.getOutputStream());
+					String result = "";
+					try {
+						
+					insertDataAndSubscribe(friendData);
+					
+					header.println("HTTP/1.1 200 OK");
+					result = "Successfully updated";
+					} catch (Exception e) {
+						header.println("HTTP/1.1 400 BAD-REQUEST");	
+						result = "Some error. Please try again";
+					}
+					System.out.println(result);
+					header.println("Access-Control-Allow-Origin: " + "*");
+					header.println("Content-type: " + "text/plain");
+					header.println("Content-length: " + result.length());
+					header.println();
+					header.flush();
+					out = new BufferedOutputStream(socket.getOutputStream());
+					out.write(result.getBytes());
+					out.flush();
+		    	
+		    }
 			
-			String[] res = sort(payload.toString());
-			System.out.println(res[1]);
-			header = new PrintWriter(socket.getOutputStream());
 			
-			if(res[0] == "1") {
-			header.println("HTTP/1.1 200 OK");
-			} else {
-				header.println("HTTP/1.1 400 BAD-REQUEST");	
-			}
-			header.println("Access-Control-Allow-Origin: " + "*");
-			header.println("Content-type: " + "text/plain");
-			header.println("Content-length: " + res[1].length());
-			header.println();
-			header.flush();
-			out = new BufferedOutputStream(socket.getOutputStream());
-			out.write(res[1].getBytes());
-			out.flush();
 			
 		} catch (Exception e) {
 			System.out.println("Unexpected Server error: " + e.getMessage());
@@ -90,4 +159,24 @@ public class Worker implements Runnable{
 		String finalData = output.toString();
 		return new String[] {"1", finalData.substring(1, finalData.length()-1)};
 	}
+	
+	private void insertDataAndSubscribe(FriendData friendData) throws Exception {
+		try {
+		Iterator<Item> iter = Builder.db().ListFriendData("BirthDayTable", friendData.getName());
+		String topic = "";
+		if(iter.hasNext()) {
+			Item item = iter.next();
+			topic = item.get("Topic").toString();
+		} else {
+			topic = Builder.sns().createTopic(friendData.getName());
+			Builder.sns().subscribeToTopic(topic, friendData.getEmail());
+		}
+		friendData.setTopicArn(topic);
+		Builder.db().insertData("BirthDayTable", friendData);
+		} catch (Exception e) {
+			EventData.info(e.getMessage());
+			throw(e);
+		}
+	}
+	
 }

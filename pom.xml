@@ -22,7 +22,12 @@
        <artifactId>DynamoDBLocal</artifactId>
        <version>[1.12,2.0)</version>
     </dependency>
-</dependencies>
+    <dependency>
+    	<groupId>com.amazonaws</groupId>
+    	<artifactId>aws-java-sdk-sns</artifactId>
+    	<version>1.11.799</version>
+    </dependency>
+  </dependencies>
 <!--Custom repository:-->
 <repositories>
     <repository>
