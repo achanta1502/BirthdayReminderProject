@@ -7,27 +7,38 @@ import java.net.Socket;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class Server{
+public class Server implements Runnable {
 	private ServerSocket server = null;
 	private final int PORT;
-	public Server(int port) {
+	private ExecutorService executor;
+	private AtomicBoolean quitter;
+	public Server(int port, ExecutorService executor, AtomicBoolean quitter) {
 		// TODO Auto-generated constructor stub
 		this.PORT = port;
+		this.executor = executor;
+		this.quitter = quitter;
 	}
-
-	public void startServer(ExecutorService executor) throws Exception{
+	
+	@Override
+	public void run(){
+		startServer(executor);
+	}
+	
+	public void startServer(ExecutorService executor){
 		try {
 		server = new ServerSocket(PORT);
 		System.out.println("Server started.\n Listetning on port " + PORT);
 		
-		while(true) {
+		while(quitter.get()) {
 			executor.execute(new Worker(server.accept()));
-			
 		}
 		
 		} catch (IOException e) {
 			e.printStackTrace();
+			executor.shutdownNow();
+			quitter.set(false);
 		}
 	}
 	

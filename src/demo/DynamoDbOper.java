@@ -13,6 +13,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.ItemCollection;
+import com.amazonaws.services.dynamodbv2.document.PutItemOutcome;
 import com.amazonaws.services.dynamodbv2.document.ScanOutcome;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
@@ -40,7 +41,7 @@ public class DynamoDbOper implements DynamoDb{
         valueMap.put(":start", new String(start));
         valueMap.put(":end", new String(end));
         
-        ScanSpec spec = new ScanSpec().withProjectionExpression("#date, FriendName")
+        ScanSpec spec = new ScanSpec().withProjectionExpression("#date, FriendName, FriendTimeZone, MyTimeZone, Email, Topic")
         		.withFilterExpression("#date between :start and :end")
         		.withNameMap(nameMap)
         		.withValueMap(valueMap);
@@ -63,6 +64,7 @@ public class DynamoDbOper implements DynamoDb{
 	}
 	
 	public void insertData(String tableName, FriendData friendData) throws Exception {
+		System.out.println("inserting date to dynamodb");
 		Table table = client.getTable(tableName);
 		Item item = new Item()
 				.withPrimaryKey("FriendName", friendData.getName())
@@ -73,7 +75,8 @@ public class DynamoDbOper implements DynamoDb{
 				.withString("Topic", friendData.getTopicArn());
 
 		try {
-			table.putItem(item);
+			PutItemOutcome output = table.putItem(item);
+			if(output == null) throw(new Exception("can't insert data into dynamoDb"));
 		} catch (Exception e) {
         	EventData.info("Unable to read movie");
 			EventData.info(e.getMessage());

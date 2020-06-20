@@ -1,6 +1,7 @@
 package demo;
 
 
+import java.time.ZonedDateTime;
 import java.util.concurrent.PriorityBlockingQueue;
 
 public class InMemoryQueue {
@@ -20,6 +21,7 @@ public class InMemoryQueue {
 	}
 	
 	public void addToInMemory(BdayDate time) {
+		if(!queue.contains(time))
 		queue.add(time);
 	}
 	
@@ -27,8 +29,20 @@ public class InMemoryQueue {
 		queue.remove(time);
 	}
 	
+	public BdayDate pop() {
+		return queue.poll();
+	}
+	
+	public boolean isEmpty() {
+		return queue.isEmpty();
+	}
+	
 	public BdayDate peekInMemory() {
 		return queue.peek();
+	}
+	
+	public boolean contains(BdayDate temp) {
+		return queue.contains(temp);
 	}
 	
 	public void setLock() {
@@ -42,4 +56,11 @@ public class InMemoryQueue {
 	public boolean isLock() {
 		return lock == 1;
 	}
+
+	@Override
+	public String toString() {
+		return "InMemoryQueue [queue=" + queue + "]";
+	}
+	
+	
 }

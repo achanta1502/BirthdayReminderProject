@@ -52,7 +52,6 @@ public class Worker implements Runnable{
 		    String api = tokens.nextToken();
 		    System.out.println(method + ", "+ api );
 		  
-		    System.out.println("done");
 		    if(api.equals("") || api.equals("/")) {
 		    	header = new PrintWriter(socket.getOutputStream());
 		    	header.println("HTTP/1.1 400 BAD-REQUEST");	
@@ -83,9 +82,7 @@ public class Worker implements Runnable{
 					out.flush();
 					
 		    	} } else if(api.equals("/listFriends")) {
-		    		System.out.println("enter");
 		    		String res = Utils.getListFriends(payload.toString());
-		    		System.out.println(res);
 		    		header = new PrintWriter(socket.getOutputStream());
 					
 
@@ -103,18 +100,18 @@ public class Worker implements Runnable{
 		     else 
 		    	if(api.equals("/addFriends")) {
 			        FriendData friendData = mapper.readValue(payload.toString(), FriendData.class);
-		    		System.out.println(friendData.toString());
 					header = new PrintWriter(socket.getOutputStream());
 					String result = "";
 					try {
 						
 					insertDataAndSubscribe(friendData);
-					
 					header.println("HTTP/1.1 200 OK");
 					result = "Successfully updated";
 					} catch (Exception e) {
 						header.println("HTTP/1.1 400 BAD-REQUEST");	
 						result = "Some error. Please try again";
+						System.out.println(e.getMessage());
+						e.printStackTrace();
 					}
 					System.out.println(result);
 					header.println("Access-Control-Allow-Origin: " + "*");
@@ -164,7 +161,7 @@ public class Worker implements Runnable{
 		try {
 		Iterator<Item> iter = Builder.db().ListFriendData("BirthDayTable", friendData.getName());
 		String topic = "";
-		if(iter.hasNext()) {
+		if(iter != null && iter.hasNext()) {
 			Item item = iter.next();
 			topic = item.get("Topic").toString();
 		} else {
@@ -173,6 +170,7 @@ public class Worker implements Runnable{
 		}
 		friendData.setTopicArn(topic);
 		Builder.db().insertData("BirthDayTable", friendData);
+		System.out.println(friendData.toString());
 		} catch (Exception e) {
 			EventData.info(e.getMessage());
 			throw(e);
